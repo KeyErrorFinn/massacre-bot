@@ -28,23 +28,28 @@ jobs:
           -t massacre-card-game-discord-bot --load .
         docker save massacre-card-game-discord-bot -o massacre-card-game-discord-bot.tar
 
-    # Upload the tarball as an artifact
-    - name: Upload tarball as an artifact
+    # Compress the Docker image tarball
+    - name: Compress Docker tarball
+      run: |
+        gzip massacre-card-game-discord-bot.tar
+
+    # Upload the compressed tarball as an artifact
+    - name: Upload compressed tarball
       uses: actions/upload-artifact@v3
       with:
-        name: massacre-card-game-discord-bot.tar
-        path: massacre-card-game-discord-bot.tar
+        name: massacre-card-game-discord-bot.tar.gz
+        path: massacre-card-game-discord-bot.tar.gz
 
   transfer_and_deploy:
     needs: deploy
     runs-on: ubuntu-latest
 
     steps:
-    # Download the tarball artifact
-    - name: Download tarball artifact
+    # Download the compressed tarball artifact
+    - name: Download compressed tarball artifact
       uses: actions/download-artifact@v3
       with:
-        name: massacre-card-game-discord-bot.tar
+        name: massacre-card-game-discord-bot.tar.gz
 
     # Set up SSH to Raspberry Pi
     - name: Set up SSH
@@ -57,36 +62,29 @@ jobs:
       run: |
         ssh-keyscan -p ${{ vars.PI_PORT }} ${{ secrets.PI_IP }} >> ~/.ssh/known_hosts
 
-    # Transfer the tarball to Raspberry Pi
-    - name: Transfer tarball to Raspberry Pi
+    # Transfer the compressed tarball to Raspberry Pi using rsync for better performance
+    - name: Transfer compressed tarball to Raspberry Pi
       run: |
-        scp -P ${{ vars.PI_PORT }} massacre-card-game-discord-bot.tar ${{ vars.PI_USER }}@${{ secrets.PI_IP }}:/home/${{ vars.PI_USER }}
+        rsync -avz -e "ssh -p ${{ vars.PI_PORT }} -i ~/.ssh/id_rsa" massacre-card-game-discord-bot.tar.gz ${{ vars.PI_USER }}@${{ secrets.PI_IP }}:/home/${{ vars.PI_USER }}
 
-    # SSH into Raspberry Pi to stop old container and load new one
-    - name: Stop old container and load new image
+    # SSH into Raspberry Pi to stop old container, load new image, and run the container
+    - name: SSH into Raspberry Pi and deploy
       run: |
-        # Write the private key to a file for SSH to use
-        echo "${{ secrets.PI_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
-        chmod 600 ~/.ssh/id_rsa
-        
-        # Add Raspberry Pi's SSH key to known hosts to avoid verification issues
-        ssh-keyscan -p ${{ vars.PI_PORT }} ${{ secrets.PI_IP }} >> ~/.ssh/known_hosts
-
-        # Run SSH command to stop the old container and load the new one
         ssh -p ${{ vars.PI_PORT }} -i ~/.ssh/id_rsa ${{ vars.PI_USER }}@${{ secrets.PI_IP }} << 'EOF'
-            # Stop and remove the old container
-            docker stop massacre-card-game-discord-bot || true
-            docker rm massacre-card-game-discord-bot || true
+          # Stop and remove the old container
+          docker stop massacre-card-game-discord-bot || true
+          docker rm massacre-card-game-discord-bot || true
 
-            # Load the Docker image from the tarball
-            docker load -i /home/${{ vars.PI_USER }}/massacre-card-game-discord-bot.tar
+          # Load new image from the compressed tarball
+          gzip -d /home/${{ vars.PI_USER }}/massacre-card-game-discord-bot.tar.gz
+          docker load -i /home/${{ vars.PI_USER }}/massacre-card-game-discord-bot.tar
 
-            # Run the new container
-            nohup lxterminal -e "docker run --rm --name massacre-card-game-discord-bot massacre-card-game-discord-bot; if [ \$? -eq 0 ]; then exit; else exec bash; fi" >/dev/null 2>&1 &
+          # Run the new container
+          nohup lxterminal -e "docker run --rm --name massacre-card-game-discord-bot massacre-card-game-discord-bot; if [ \$? -eq 0 ]; then exit; else exec bash; fi" >/dev/null 2>&1 &
 
-            # Clean up by removing the tarball
-            rm /home/${{ vars.PI_USER }}/massacre-card-game-discord-bot.tar
+          # Clean up tarball
+          rm /home/${{ vars.PI_USER }}/massacre-card-game-discord-bot.tar
 
-            # Optional: Prune unused Docker resources
-            docker system prune -f
+          # Optionally prune unused Docker resources
+          docker system prune -f
         EOF
