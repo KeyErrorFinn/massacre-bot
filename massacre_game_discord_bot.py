@@ -1,17 +1,20 @@
 # option = input("T or P?: ")
-import asyncpg
 import asyncio
-import os
 import discord
 from discord.ext import commands
 from discord.ext.commands import MemberConverter
 import random
 import copy
+from dotenv import load_dotenv
+import os
 
+load_dotenv()
+discord_token = os.getenv("DISCORD_TOKEN")
+discord_streaming_url = os.getenv("DISCORD_STREAMING_URL")
 
 print("Started")
 # Sets all the bots information
-bot = commands.Bot(command_prefix="!", case_insensitive=True, description='A Buushy Product', owner_id=296366982599671809, activity=discord.Streaming(name="PrivateBot", url='https://www.twitch.tv/'))
+bot = commands.Bot(command_prefix="!", case_insensitive=True, description='A Buushy Product', owner_id=296366982599671809, activity=discord.Streaming(name="PrivateBot", url=discord_streaming_url))
 # Removes the default help command
 bot.remove_command("help")
 
@@ -23,7 +26,7 @@ def DefaultEverything(Parameter=None):
     if Parameter != "Cancel":
         bot.Cancel = False  # Wether someone cancelled or not
     bot.Left = None  # The player that left the game
-    bot.Winner = None  # The winneer of the game
+    bot.Winner = None  # The winner of the game
     bot.Deck = None  # All the cards in the deck
     bot.Turn = None  # Who's turn it is
     bot.TopCard = "None"  # The card that is at the top of the pile
@@ -83,9 +86,9 @@ def WhichPlayer(Player):
 # Creates the deck with each card
 def CreateDeck():
     bot.Deck = ["J1", "J2"]  # Puts joker cards in the deck
-    for cardnum in range(13):  # Loops 13 times to apply card numbers 2-14
+    for cardNum in range(13):  # Loops 13 times to apply card numbers 2-14
         for Type in ["H", "C", "D", "S"]:  # Goes through each type when making a card
-            bot.Deck.append(f"{Type}{cardnum + 2}")  # Puts the card into the deck
+            bot.Deck.append(f"{Type}{cardNum + 2}")  # Puts the card into the deck
 
 
 # Gets deck, Picks a card and removes it from deck
@@ -121,12 +124,12 @@ def SortCardsInHand(Player):
 def StarterCards():
     # Hidden Cards
     if bot.GameRestart:
-        for catagory in ["Hand", "Shown", "Hidden"]:
+        for category in ["Hand", "Shown", "Hidden"]:
             for Player in ["P1", "P2"]:
-                if catagory == "Hidden":
+                if category == "Hidden":
                     Cards = bot.PlayerInfo[Player]["Cards"]["Hidden"]["Cards"]
                 else:
-                    Cards = bot.PlayerInfo[Player]["Cards"][catagory]
+                    Cards = bot.PlayerInfo[Player]["Cards"][category]
                 for card in copy.deepcopy(Cards):
                     Cards.append(RandomCard(card))
         bot.Deck = bot.RiggedDeck
@@ -276,7 +279,7 @@ async def DisplayCards(CommandSender):
         bot.PlayerInfo["P2"]["MSG"].append(await P2Data["Player"].send(embed=SendToPlayer("P2", "P1")))
     else:
         P1MSG, P2MSG = P1Data["MSG"][-1], P2Data["MSG"][-1]
-        async def msgdelete(msg, player=None):
+        async def msg_delete(msg, player=None):
             # if player is None:
             #     forplayer = ""
             # else:
@@ -299,9 +302,9 @@ async def DisplayCards(CommandSender):
                     # try:
                     #     await themsg.edit(
                     #         embed=discord.Embed(title="DELETED", description=f"DELETED", color=Colour("Gold")))
-                    #     print("couldnt delete")
+                    #     print("couldn't delete")
                     # except:
-                    #     print("couldnt edit or delete")
+                    #     print("couldn't edit or delete")
                 # print(f"Msg deleted{forplayer}")
                 # except Exception as e:
                 #     print(e)
@@ -335,8 +338,8 @@ async def DisplayCards(CommandSender):
         elif bot.MessageOutput == "Replace":
             P1Data["MSG"].append(await P1Data["Player"].send(embed=SendToPlayer("P1", "P2")))
             P2Data["MSG"].append(await P2Data["Player"].send(embed=SendToPlayer("P2", "P1")))
-            await msgdelete(P1Data["MSG"], "1")
-            await msgdelete(P2Data["MSG"], "2")
+            await msg_delete(P1Data["MSG"], "1")
+            await msg_delete(P2Data["MSG"], "2")
             # P1Data["MSG"], P2Data["MSG"] = NewP1MSG, NewP2MSG
 
 
@@ -457,7 +460,7 @@ async def MSwap(cmd, HandCard=None, ShownCard=None):
         HandCard = ChangeValues(HandCard)
         ShownCard = ChangeValues(ShownCard)
         PCards = bot.PlayerInfo[Player]["Cards"]
-        # cards arnt in deck
+        # cards arn't in deck
         if HandCard not in PCards["Hand"]:
             message = await cmd.channel.send(embed=discord.Embed(title="Not In Hand",
                                                                  description="The card you entered is not in your hand",
@@ -875,7 +878,7 @@ async def Game(cmd, command="", Player="None"):
     # Whether its starting or joining a game
     if command == "start" or command == "s":
         if bot.GameState is not None:
-            message = await cmd.channel.send(embed=discord.Embed(title="Game In Progession",
+            message = await cmd.channel.send(embed=discord.Embed(title="Game In Progression",
                                                                  description="Wait before the game ends before starting a new game",
                                                                  color=Colour("Red")))
             await MSGDel(message, cmd)
@@ -896,7 +899,7 @@ async def Game(cmd, command="", Player="None"):
                           color=Colour("Purple")))
     elif command == "join" or command == "j":
         if bot.GameState is not None:
-            message = await cmd.channel.send(embed=discord.Embed(title="Game In Progession",
+            message = await cmd.channel.send(embed=discord.Embed(title="Game In Progression",
                                                                  description="Wait before the game ends before starting a new game",
                                                                  color=Colour("Red")))
             await MSGDel(message, cmd)
@@ -941,7 +944,7 @@ async def Game(cmd, command="", Player="None"):
                 Member = "None"
             return Member
         if bot.GameState is not None:
-            message = await cmd.channel.send(embed=discord.Embed(title="Game In Progession",
+            message = await cmd.channel.send(embed=discord.Embed(title="Game In Progression",
                                                                  description="Wait before the game ends before inviting a player",
                                                                  color=Colour("Red")))
             await MSGDel(message, cmd)
@@ -953,7 +956,7 @@ async def Game(cmd, command="", Player="None"):
             await MSGDel(message, cmd)
         elif Player == "None":
             message = await cmd.channel.send(embed=discord.Embed(title="No Player @'d",
-                                                                 description="To invite a player, type `!game invite @(playername)` or type `!game start`",
+                                                                 description="To invite a player, type `!game invite @(player-name)` or type `!game start`",
                                                                  color=Colour("Gray")))
             await MSGDel(message, cmd)
         elif (await MentionedPlayer()) == "None":
@@ -999,7 +1002,7 @@ async def Game(cmd, command="", Player="None"):
                     await MSGDel(message, cmd)
     elif command == "accept" or command == "a":
         if bot.GameState is not None:
-            message = await cmd.channel.send(embed=discord.Embed(title="Game In Progession",
+            message = await cmd.channel.send(embed=discord.Embed(title="Game In Progression",
                                                                  description="Wait before the game ends before accepting an invite",
                                                                  color=Colour("Red")))
             await MSGDel(message, cmd)
@@ -1011,12 +1014,12 @@ async def Game(cmd, command="", Player="None"):
             await MSGDel(message, cmd)
         elif Player == "None":
             message = await cmd.channel.send(embed=discord.Embed(title="No Invite Specified",
-                                                                 description="You have to specifiy an invite number to accept",
+                                                                 description="You have to specify an invite number to accept",
                                                                  color=Colour("Red")))
             await MSGDel(message, cmd)
         elif Player not in bot.Invites:
             message = await cmd.channel.send(embed=discord.Embed(title="Invite Does Not Exist",
-                                                                 description="You have to specifiy an valid invite number to accept",
+                                                                 description="You have to specify an valid invite number to accept",
                                                                  color=Colour("Red")))
             await MSGDel(message, cmd)
         elif cmd.author != bot.Invites[Player]["Invited"]:
@@ -1048,7 +1051,7 @@ async def Game(cmd, command="", Player="None"):
             await MainGame()
     elif command == "leave" or command == "l":
         if bot.GameState is not None:
-            message = await cmd.channel.send(embed=discord.Embed(title="Game In Progession",
+            message = await cmd.channel.send(embed=discord.Embed(title="Game In Progression",
                                                                  description="Wait before the game ends before starting a new game",
                                                                  color=Colour("Red")))
             await MSGDel(message, cmd)
@@ -1086,7 +1089,7 @@ async def MHelp(cmd):
     MPlaceMulti = "**!MPlace/Place/MP (Card),(Card)** - If you own the cards entered, they will be placed.\n\n"
     MPickUp = "**!MPickUp/Pickup/MPU** - Picks up the pile and puts the cards into your hand.\n\n"
     MSwap = "**!MSwap/Swap/MS (Hand Card) (Top Card)** - During intermissions, it swaps the card in your hand with one of your top cards.\n\n"
-    MReady = "**!MReady/Ready/MR** - Readys you up when prompted (Intermissions & Results).\n\n"
+    MReady = "**!MReady/Ready/MR** - Readies you up when prompted (Intermissions & Results).\n\n"
     MCancel = "**!MCancel/Cancel/MC** - During Results, this would stop you from playing another game.\n\n"
     MLeave = "**!MLeave/Leave** - This makes you forfeit the game and lets the other player win.\n\n"
     Ping = "**!Ping** - This pings the other player.\n\n"
@@ -1105,5 +1108,5 @@ async def SuperSecretPrint(cmd):
         print(bot.Turn)
 
 
-TOKEN = ""
+TOKEN = discord_token
 bot.run(TOKEN)
