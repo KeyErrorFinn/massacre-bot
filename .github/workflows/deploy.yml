@@ -19,19 +19,6 @@ jobs:
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v2
 
-    # - name: Create new builder instance (if needed)
-    #   run: |
-    #     docker buildx create --name mybuilder --use
-    #     docker buildx use mybuilder
-
-    # - name: Cache Docker layers
-    #   uses: actions/cache@v3
-    #   with:
-    #       path: /tmp/.buildx-cache
-    #       key: ${{ runner.os }}-buildx-${{ github.sha }}
-    #       restore-keys: |
-    #         ${{ runner.os }}-buildx-
-
     # Build the Docker image
     - name: Build Docker image and Save as tarball
       run: |
@@ -40,11 +27,6 @@ jobs:
           --build-arg DISCORD_STREAMING_URL=${{ vars.DISCORD_STREAMING_URL }} \
           -t massacre-card-game-discord-bot --load .
         docker save massacre-card-game-discord-bot -o massacre-card-game-discord-bot.tar
-
-    # # Save Docker image to tarball
-    # - name: Save Docker image as tarball
-    #   run: |
-    #     docker save massacre-card-game-discord-bot -o massacre-card-game-discord-bot.tar
 
     # Upload the tarball as an artifact
     - name: Upload tarball as an artifact
@@ -91,7 +73,7 @@ jobs:
         ssh-keyscan -p ${{ vars.PI_PORT }} ${{ secrets.PI_IP }} >> ~/.ssh/known_hosts
 
         # Run SSH command to stop the old container and load the new one
-        ssh -o ConnectTimeout=120 -o ServerAliveInterval=60 -o ServerAliveCountMax=10 -p ${{ vars.PI_PORT }} -i ~/.ssh/id_rsa ${{ vars.PI_USER }}@${{ secrets.PI_IP }} << 'EOF'
+        ssh -p ${{ vars.PI_PORT }} -i ~/.ssh/id_rsa ${{ vars.PI_USER }}@${{ secrets.PI_IP }} << 'EOF'
             # Stop and remove the old container
             docker stop massacre-card-game-discord-bot || true
             docker rm massacre-card-game-discord-bot || true
@@ -100,9 +82,7 @@ jobs:
             docker load -i /home/${{ vars.PI_USER }}/massacre-card-game-discord-bot.tar
 
             # Run the new container
-            # docker run -d --name massacre-card-game-discord-bot massacre-card-game-discord-bot
-            nohup lxterminal -e "docker run --rm --name massacre-card-game-discord-bot massacre-card-game-discord-bot; exec bash" >/dev/null 2>&1 &
-            sleep 5
+            nohup lxterminal -e "docker run --rm --name massacre-card-game-discord-bot massacre-card-game-discord-bot; if [ \$? -eq 0 ]; then exit; else exec bash; fi" >/dev/null 2>&1 &
 
             # Clean up by removing the tarball
             rm /home/${{ vars.PI_USER }}/massacre-card-game-discord-bot.tar
